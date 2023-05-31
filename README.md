@@ -1,5 +1,5 @@
 # AdvancedVCSettings
-![Screenshot 2023-05-31 001056](https://github.com/DragonFire47/AdvancedVCSettings/assets/46509577/f8413372-617d-4af3-b153-d290d55d668f)
+![Screenshot 2023-05-31 154221](https://github.com/DragonFire47/AdvancedVCSettings/assets/46509577/d85ed293-4d70-4429-8579-11fb130581b5)
 
 ## Information
 For Game Version 1.2.04  
