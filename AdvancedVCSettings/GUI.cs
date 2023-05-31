@@ -7,6 +7,8 @@ namespace AdvancedVCSettings
 {
     internal class GUI : ModSettingsMenu
     {
+        bool VCEnabled;
+
         float MasterVolume = 1f;
         float CachedMasterVolume = 1f;
 
@@ -29,8 +31,20 @@ namespace AdvancedVCSettings
             }
         }
 
+        public override void OnOpen()
+        {
+            VCEnabled = Global.GetVCState();
+        }
+
         public override void Draw()
         {
+            if(Button("Voice Chat: " + (VCEnabled ? "Enabled" : "Disabled")))
+            {
+                VCEnabled = !VCEnabled;
+                Global.SetVCState(VCEnabled);
+            }
+            Label("VC State: " + PhotonVoiceNetwork.ClientState.ToString());
+
             //MV Slider
             Label("Master Volume");
 

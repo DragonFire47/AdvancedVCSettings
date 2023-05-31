@@ -9,7 +9,7 @@ namespace AdvancedVCSettings
     {
         public override string[][] Arguments()
         {
-            return new string[][] { new string[] { "master", "mastervolume", "mastervolumemultiplier", "mvm", "mastermultiplier", "mm", "playervolume", "pv" } };
+            return new string[][] { new string[] { "vctoggle", "vct", "master", "mastervolume", "mastervolumemultiplier", "mvm", "mastermultiplier", "mm", "playervolume", "pv" } };
         }
 
         public override string[] CommandAliases()
@@ -27,6 +27,11 @@ namespace AdvancedVCSettings
             string[] args = arguments.ToLower().Split(' ');
             switch (args[0])
             {
+                case "vctoggle":
+                case "vct":
+                    Messaging.Notification("Voice Chat: " + !Global.GetVCState());
+                    Global.SetVCState(!Global.GetVCState());
+                    break;
                 case "master":
                 case "mastervolume":
                 case "mv":
@@ -105,6 +110,7 @@ namespace AdvancedVCSettings
                                 Logger.Info($"AVCS Debug P2: {pPlayer.ID}");
                         }
                     }
+                    Messaging.Notification("ClientState: " + PhotonVoiceNetwork.ClientState.ToString());
                     break;
                 default:
                     Messaging.Notification("Please insert a subcommand, read '/help avc' for info on subcommands.");

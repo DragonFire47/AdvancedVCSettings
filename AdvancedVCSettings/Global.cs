@@ -26,5 +26,24 @@ namespace AdvancedVCSettings
             }
             return false;
         }
+        
+        public static void SetVCState(bool Connect)
+        {
+            if (Connect)
+            {
+                PLXMLOptionsIO.Instance.CurrentOptions.SetStringValue("VoiceChatEnabled", "1");
+                PhotonVoiceNetwork.Client.Reconnect();
+            }
+            else
+            {
+                PLXMLOptionsIO.Instance.CurrentOptions.SetStringValue("VoiceChatEnabled", "0");
+                PhotonVoiceNetwork.Client.Disconnect();
+            }
+        }
+
+        public static bool GetVCState()
+        {
+            return PLXMLOptionsIO.Instance.CurrentOptions.GetStringValue("VoiceChatEnabled") == "1";
+        }
     }
 }
