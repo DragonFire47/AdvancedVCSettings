@@ -19,7 +19,7 @@ namespace AdvancedVCSettings
 
         public override string Description()
         {
-            return "Controls subcommands";
+            return "Controls subcommands for advanced voice chat.";
         }
 
         public override void Execute(string arguments)
@@ -107,6 +107,7 @@ namespace AdvancedVCSettings
                     }
                     break;
                 default:
+                    Messaging.Notification("Please insert a subcommand, read '/help avc' for info on subcommands.");
                     break;
             }
         }

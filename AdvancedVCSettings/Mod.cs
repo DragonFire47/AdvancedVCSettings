@@ -10,6 +10,8 @@ namespace AdvancedVCSettings
 
         public override string Name => "AdvancedVCSettings";
 
+        public override string LongDescription => "Features:\r\n- Provides control over individual player volume in the existing voice chat system.\r\n- Provides extra control on overall voice chat volume.\r\n- Saves set player volume based on Steam IDs.";
+
         public override string HarmonyIdentifier()
         {
             return $"{Author}.{Name}";
