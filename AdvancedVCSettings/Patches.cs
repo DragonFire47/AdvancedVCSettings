@@ -1,47 +1,74 @@
 ﻿using HarmonyLib;
+using PulsarModLoader.Utilities;
+using Steamworks;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace AdvancedVCSettings
 {
     class Patches
     {
-        //static PLPhotonVoice
-        /*[HarmonyPatch(typeof(PLPhotonVoice), "Update")]
-        internal class PVUpdatePatch
+        //Loads settings from saved steam IDs when other players join the current session. Due to SteamIDs being sent by the PLPlayer onPhotonSerialization method, steamID settings cannot be loaded until steamIDs have been assigned.
+        [HarmonyPatch(typeof(PLServer), "NotifyPlayerStart")]
+        class SteamSettingOthersJoinPatch
         {
-            static float PatchMethod(float inVolume)
+            static void Postfix(PLServer __instance, int inPlayerID)
             {
-                return inVolume * Global.VCMainVolume.Value;
-            }
-            static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
-            {
-                List<CodeInstruction> TargetSequence = new List<CodeInstruction>()
-                {
-                    new CodeInstruction(OpCodes.Ldstr, "VolumeVoice"),
-                    new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(PLOptionsData), "GetFloatValue"))
-                };
-                List<CodeInstruction> InjectedSequence = new List<CodeInstruction>()
-                {
-                    new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(PVUpdatePatch), "PatchMethod")),
+                PhotonPlayer PPlayer = PLServer.Instance.GetPlayerFromPlayerID(inPlayerID).GetPhotonPlayer();
 
-                };
-                return HarmonyHelpers.PatchBySequence(instructions, TargetSequence, InjectedSequence, HarmonyHelpers.PatchMode.AFTER, HarmonyHelpers.CheckMode.NONNULL, false);
+                if (Global.SteamPlayerVolumes.Value.ContainsKey(PPlayer.SteamID.m_SteamID))
+                {
+                    if (Global.PlayerVolumes.ContainsKey(PPlayer))
+                    {
+                        Global.PlayerVolumes[PPlayer] = Global.SteamPlayerVolumes.Value[PPlayer.SteamID.m_SteamID];
+                    }
+                    else
+                    {
+                        Logger.Info("Couldn't load setting from steam volumes into PlayerVolumes");
+                    }
+                }
             }
-        }*/
+        }
+
+        //Loads settings from saved steam IDs when joining an existing session.
+        [HarmonyPatch(typeof(PLGlobal), "EnterNewGame")]
+        class SteamSettingOnJoinPatch
+        {
+            static void Postfix(PLGlobal __instance)
+            {
+                List<PhotonPlayer> PlayerList = Global.PlayerVolumes.Keys.ToList();
+                foreach (PhotonPlayer PPlayer in PlayerList)
+                {
+                    if (PPlayer.SteamID != CSteamID.Nil && Global.SteamPlayerVolumes.Value.ContainsKey(PPlayer.SteamID.m_SteamID))
+                    {
+                        Global.PlayerVolumes[PPlayer] = Global.SteamPlayerVolumes.Value[PPlayer.SteamID.m_SteamID];
+                    }
+                }
+            }
+        }
+
+        //Adds volume to list when photonVoice is instantiated.
         [HarmonyPatch(typeof(PLPhotonVoice), "Start")]
         class PLPVStartPatch
         {
             static void Postfix(PLPhotonVoice __instance)
             {
-                Global.PlayerVolumes.Add(__instance.photonView.owner, 1f);
+                PhotonPlayer PPLayer = __instance.photonView.owner;
+                if (!PPLayer.IsLocal)
+                {
+                    Global.PlayerVolumes.Add(PPLayer, 1f);
+                }
             }
         }
+
+        //Modifies volume
         [HarmonyPatch(typeof(PhotonVoiceSpeaker), "OnAudioFrame")]
         internal class PVSAudioFramePatch
         {
             static void Prefix(PhotonVoiceSpeaker __instance, ref float[] frame)
             {
                 PhotonPlayer player = __instance.photonView.owner;
-                if(Global.PlayerVolumes.ContainsKey(player))
+                if (Global.PlayerVolumes.ContainsKey(player))
                 {
                     float playerVolume = Global.PlayerVolumes[player];
                     for (int i = 0; i < frame.Length; i++)
@@ -56,12 +83,24 @@ namespace AdvancedVCSettings
                 }
             }
         }
+
+        //Remove players from list as they disconnect.
         [HarmonyPatch(typeof(PLNetworkManager), "OnPhotonPlayerDisconnected")]
         class PlayerDisconnectPatch
         {
             static void Postfix(PhotonPlayer photonPlayer)
             {
                 Global.PlayerVolumes.Remove(photonPlayer);
+            }
+        }
+
+        //clear playerVolumes on session end.
+        [HarmonyPatch(typeof(PLNetworkManager), "OnLeaveGame")]
+        class JoinSessionPatch
+        {
+            static void Postfix()
+            {
+                Global.PlayerVolumes.Clear();
             }
         }
     }

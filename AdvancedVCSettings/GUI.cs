@@ -132,6 +132,7 @@ namespace AdvancedVCSettings
             }
             if (!foundManagedPPlayer)
             {
+                ManagedPPlayer = null;
                 ManagedPlayer = null;
             }
 
@@ -146,7 +147,7 @@ namespace AdvancedVCSettings
                     BeginHorizontal();
                     {
                         AssignedPlayerVolume = HorizontalSlider(AssignedPlayerVolume, 0f, 5f);
-                        Label(AssignedPlayerVolume.ToString("000%"), NumberLabelSetting);
+                        Label(AssignedPlayerVolume.ToString("0.#x"), NumberLabelSetting);
                     }
                     EndHorizontal();
                 }
@@ -154,15 +155,16 @@ namespace AdvancedVCSettings
 
                 if (AssignedPlayerVolume != CachedPlayerVolume)
                 {
-                    if (!Global.PlayerVolumes.ContainsKey(ManagedPPlayer))
+                    if (Global.TrySetPlayerVolume(ManagedPPlayer, AssignedPlayerVolume))
+                    {
+                        CachedPlayerVolume = AssignedPlayerVolume;
+                    }
+                    else
                     {
                         Messaging.Notification("Player volume does not exist! This player's volume cannot be modified.");
                         PulsarModLoader.Utilities.Logger.Info("Player volume does not exist!");
                         return;
                     }
-
-                    CachedPlayerVolume = AssignedPlayerVolume;
-                    Global.PlayerVolumes[ManagedPPlayer] = AssignedPlayerVolume;
                 }
             }
             else
