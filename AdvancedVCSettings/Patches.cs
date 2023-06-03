@@ -14,9 +14,16 @@ namespace AdvancedVCSettings
         {
             static void Postfix(PLServer __instance, int inPlayerID)
             {
-                PhotonPlayer PPlayer = PLServer.Instance.GetPlayerFromPlayerID(inPlayerID).GetPhotonPlayer();
+                PLPlayer player = PLServer.Instance.GetPlayerFromPlayerID(inPlayerID);
+                if(player == null)
+                {
+                    Logger.Info("AVC NPSPatch: Player was null");
+                    return;
+                }
 
-                if (Global.SteamPlayerVolumes.Value.ContainsKey(PPlayer.SteamID.m_SteamID))
+                PhotonPlayer PPlayer = player.GetPhotonPlayer();
+
+                if (PPlayer != null && Global.SteamPlayerVolumes.Value.ContainsKey(PPlayer.SteamID.m_SteamID))
                 {
                     if (Global.PlayerVolumes.ContainsKey(PPlayer))
                     {
