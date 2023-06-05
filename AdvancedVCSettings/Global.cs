@@ -60,6 +60,7 @@ namespace AdvancedVCSettings
             }
             else if (PhotonVoiceNetwork.ClientState == ExitGames.Client.Photon.LoadBalancing.ClientState.Disconnected)
             {
+                //Not sure if anything is broken to the point of needing this.
                 PhotonVoiceNetwork.Client.AuthValues = null;
                 PhotonVoiceNetwork.Client.Reconnect();
             }

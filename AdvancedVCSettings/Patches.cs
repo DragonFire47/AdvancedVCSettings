@@ -111,6 +111,7 @@ namespace AdvancedVCSettings
             }
         }
 
+        //Patch Vanilla VC menu to reconnect when enabled.
         [HarmonyPatch(typeof(PLUIAudioSettingsMenu), "Update")]
         class VanillaSettingsMenuPatch
         {
