@@ -110,5 +110,22 @@ namespace AdvancedVCSettings
                 Global.PlayerVolumes.Clear();
             }
         }
+
+        [HarmonyPatch(typeof(PLUIAudioSettingsMenu), "Update")]
+        class VanillaSettingsMenuPatch
+        {
+            static bool CachedIsOn = true;
+            static void Postfix(PLUIAudioSettingsMenu __instance)
+            {
+                if(__instance.Visuals.activeSelf && __instance.VCEnabledToggle.isOn != CachedIsOn)
+                {
+                    CachedIsOn = __instance.VCEnabledToggle.isOn;
+                    if (CachedIsOn)
+                    {
+                        PhotonVoiceNetwork.Client.Reconnect();
+                    }
+                }
+            }
+        }
     }
 }
