@@ -1,6 +1,7 @@
 ﻿using PulsarModLoader;
 using System.Collections.Generic;
 using Steamworks;
+using PulsarModLoader.Utilities;
 
 namespace AdvancedVCSettings
 {
@@ -44,6 +45,41 @@ namespace AdvancedVCSettings
         public static bool GetVCState()
         {
             return PLXMLOptionsIO.Instance.CurrentOptions.GetStringValue("VoiceChatEnabled") == "1";
+        }
+
+        public static bool CanFixVCState()
+        {
+            return PhotonVoiceNetwork.ClientState == ExitGames.Client.Photon.LoadBalancing.ClientState.Disconnecting || PhotonVoiceNetwork.ClientState == ExitGames.Client.Photon.LoadBalancing.ClientState.Disconnected;
+        }
+
+        public static void FixVCState()
+        {
+            if (PhotonVoiceNetwork.ClientState == ExitGames.Client.Photon.LoadBalancing.ClientState.Disconnecting)
+            {
+                PhotonVoiceNetwork.Client.OnStateChange(ExitGames.Client.Photon.LoadBalancing.ClientState.Disconnected);
+            }
+            else if (PhotonVoiceNetwork.ClientState == ExitGames.Client.Photon.LoadBalancing.ClientState.Disconnected)
+            {
+                PhotonVoiceNetwork.Client.AuthValues = null;
+                PhotonVoiceNetwork.Client.Reconnect();
+            }
+        }
+
+        public static void AttemptFixVCState()
+        {
+            if (!GetVCState())
+            {
+                Messaging.Notification("Enable VC before attempting to fix.");
+            }
+            else if (CanFixVCState())
+            {
+                Messaging.Notification("Attempting to fix VC");
+                FixVCState();
+            }
+            else
+            {
+                Messaging.Notification("No fixes available.");
+            }
         }
     }
 }

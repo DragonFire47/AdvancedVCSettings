@@ -38,11 +38,20 @@ namespace AdvancedVCSettings
 
         public override void Draw()
         {
-            if(Button("Voice Chat: " + (VCEnabled ? "Enabled" : "Disabled")))
+            BeginHorizontal();
             {
-                VCEnabled = !VCEnabled;
-                Global.SetVCState(VCEnabled);
+                if (Button("Voice Chat: " + (VCEnabled ? "Enabled" : "Disabled")))
+                {
+                    VCEnabled = !VCEnabled;
+                    Global.SetVCState(VCEnabled);
+                }
+
+                if (Button("Fix VC", NumberLabelSetting))
+                {
+                    Global.AttemptFixVCState();
+                }
             }
+            EndHorizontal();
             Label("VC State: " + PhotonVoiceNetwork.ClientState.ToString());
 
             //MV Slider

@@ -9,7 +9,7 @@ namespace AdvancedVCSettings
     {
         public override string[][] Arguments()
         {
-            return new string[][] { new string[] { "vctoggle", "vct", "master", "mastervolume", "mastervolumemultiplier", "mvm", "mastermultiplier", "mm", "playervolume", "pv" } };
+            return new string[][] { new string[] { "vctoggle", "vct", "master", "mastervolume", "mastervolumemultiplier", "mvm", "mastermultiplier", "mm", "playervolume", "pv", "fix" } };
         }
 
         public override string[] CommandAliases()
@@ -19,7 +19,8 @@ namespace AdvancedVCSettings
 
         public override string Description()
         {
-            return "Controls subcommands for advanced voice chat.";
+            return "Controls subcommands for advanced voice chat. VCT - Toggle VC on/off, MV [value] - Set Main Volume, MVM [value] - Set Main Volume Multiplier, " +
+                "PV [PlayerID] [Value] - Set Player Volume, FIX - Attempts to fix VC";
         }
 
         public override void Execute(string arguments)
@@ -38,11 +39,11 @@ namespace AdvancedVCSettings
                     if (args.Length > 1 && float.TryParse(args[1], out float masterVolume))
                     {
                         PLXMLOptionsIO.Instance.CurrentOptions.SetFloatValue("VolumeVoice", masterVolume);
-                        Messaging.Notification("Main volume set to: " + Global.VCMainVolume.Value.ToString("000%"));
+                        Messaging.Notification("Master volume set to: " + masterVolume.ToString("000%"));
                     }
                     else
                     {
-                        Messaging.Notification("Please input a number. Current Value: " + Global.VCMainVolume.Value.ToString("000%"));
+                        Messaging.Notification("Please input a number. Current Value: " + PLXMLOptionsIO.Instance.CurrentOptions.GetFloatValue("VolumeVoice").ToString("000%"));
                     }
                     break;
                 case "mastervolumemultiplier":
@@ -52,11 +53,11 @@ namespace AdvancedVCSettings
                     if (args.Length > 1 && float.TryParse(args[1], out float masterVolumeMultiplier))
                     {
                         Global.VCMainVolume.Value = masterVolumeMultiplier;
-                        Messaging.Notification("Main volume set to: " + Global.VCMainVolume.Value.ToString("000%"));
+                        Messaging.Notification("Master volume multiplier set to: " + Global.VCMainVolume.Value.ToString("0.#x"));
                     }
                     else
                     {
-                        Messaging.Notification("Please input a number. Current Value: " + Global.VCMainVolume.Value.ToString("000%"));
+                        Messaging.Notification("Please input a number. Current Value: " + Global.VCMainVolume.Value.ToString("0.#x"));
                     }
                     break;
                 case "playervolume":
@@ -94,6 +95,9 @@ namespace AdvancedVCSettings
                     {
                         Messaging.Notification("Requires a player name/ID and a number. /avc pv [player] [playervolume]");
                     }
+                    break;
+                case "fix":
+                    Global.AttemptFixVCState();
                     break;
                 case "dbg":
                     Dictionary<KeyValuePair<int, byte>, PhotonVoiceSpeaker> voices = (Dictionary<KeyValuePair<int, byte>, PhotonVoiceSpeaker>)AccessTools.Field(typeof(UnityVoiceFrontend), "voiceSpeakers").GetValue(PhotonVoiceNetwork.Client);
