@@ -9,7 +9,7 @@ namespace AdvancedVCSettings
     {
         public override string[][] Arguments()
         {
-            return new string[][] { new string[] { "vctoggle", "vct", "master", "mastervolume", "mastervolumemultiplier", "mvm", "mastermultiplier", "mm", "playervolume", "pv", "fix" } };
+            return new string[][] { new string[] { "vctoggle", "vct", "master", "mastervolume", "mastervolumemultiplier", "mvm", "mastermultiplier", "mm", "playervolume", "pv", "priorityspeaker", "ps", "mute", "fix" } };
         }
 
         public override string[] CommandAliases()
@@ -19,8 +19,8 @@ namespace AdvancedVCSettings
 
         public override string Description()
         {
-            return "Controls subcommands for advanced voice chat. VCT - Toggle VC on/off, MV [value] - Set Main Volume, MVM [value] - Set Main Volume Multiplier, " +
-                "PV [PlayerID] [Value] - Set Player Volume, FIX - Attempts to fix VC";
+            return "Controls subcommands for advanced voice chat. VCT - Toggle VC on/off, MV [Value] - Set Main Volume, MVM [Value] - Set Main Volume Multiplier, " +
+                "PV [Player] [Value] - Set Player Volume, FIX - Attempts to fix VC, PS [Player] - Set player as priority speaker, MUTE [Player] - Mute or unmute player.";
         }
 
         public override void Execute(string arguments)
@@ -70,8 +70,9 @@ namespace AdvancedVCSettings
                     if (args.Length > 2 && PVPlayer && float.TryParse(args[2], out float playerVolume))
                     {
                         PhotonPlayer PPlayer = PVPlayer.GetPhotonPlayer();
-                        if (Global.TrySetPlayerVolume(PPlayer, playerVolume))
+                        if (Global.PlayerData.TryGetValue(PPlayer, out PlayerVCSettings value))
                         {
+                            value.PlayerVolume = playerVolume;
                             Messaging.Notification($"volume of {PVPlayer.GetPlayerName()} set to {playerVolume.ToString("0.#x")}");
                         }
                         else
@@ -82,9 +83,9 @@ namespace AdvancedVCSettings
                     else if (PVPlayer)
                     {
                         PhotonPlayer PPlayer = PVPlayer.GetPhotonPlayer();
-                        if (Global.PlayerVolumes.TryGetValue(PPlayer, out float value))
+                        if (Global.PlayerData.TryGetValue(PPlayer, out PlayerVCSettings value))
                         {
-                            Messaging.Notification($"Volume of {PVPlayer.GetPlayerName()} is currently set to {value.ToString("0.#x")}");
+                            Messaging.Notification($"Volume of {PVPlayer.GetPlayerName()} is currently set to {value.PlayerVolume.ToString("0.#x")}");
                         }
                         else
                         {
@@ -95,6 +96,59 @@ namespace AdvancedVCSettings
                     {
                         Messaging.Notification("Requires a player name/ID and a number. /avc pv [player] [playervolume]");
                     }
+                    break;
+                case "priorityspeaker":
+                case "ps":
+                    if(args.Length == 1)
+                    {
+                        string speakers = string.Empty;
+                        foreach(PlayerVCSettings PVCS in Global.PlayerData.Values)
+                        {
+                            if (PVCS != null && PVCS.Player != null)
+                            {
+                                //Takes care of commas
+                                if(speakers != string.Empty)
+                                {
+                                    speakers += ", ";
+                                }
+
+                                //add player to speaker list
+                                speakers += PVCS.Player.GetPlayerName();
+                            }
+                        }
+                        Messaging.Notification("Format: /avc ps [player]; Priority speakers: " + speakers);
+                    }
+                    if (args.Length > 1)
+                    {
+                        PLPlayer player = HelperMethods.GetPlayer(args[1]);
+                        PhotonPlayer pplayer = player.GetPhotonPlayer();
+                        if (player != null && pplayer != null)
+                        {
+                            bool PSSetting = Global.PlayerData[pplayer].IsPrioritySpeaker;
+                            Global.PlayerData[pplayer].IsPrioritySpeaker = !PSSetting;
+
+                            Messaging.Notification($"{player.GetPlayerName()} is {(PSSetting ? "now" : "no longer")} a priority speaker" );
+                        }
+                        else
+                        {
+                            Messaging.Notification("Player not detected. Format: /avc ps [player]");
+                        }
+                    }
+                    break;
+                case "mute":
+                    if (args.Length > 1)
+                    {
+                        PLPlayer player = HelperMethods.GetPlayer(args[1]);
+                        PhotonPlayer pplayer = player.GetPhotonPlayer();
+                        if (player != null && pplayer != null)
+                        {
+                            Global.PlayerData[pplayer].Muted = player.TS_IsMuted;
+
+                            Messaging.Notification($"{player.GetPlayerName()} is now {(player.TS_IsMuted ? "muted" : "unmuted")}");
+                        }
+                    }
+
+                    Messaging.Notification("No player detected. Format: /avc mute [player]");
                     break;
                 case "fix":
                     Global.AttemptFixVCState();

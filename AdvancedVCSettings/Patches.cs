@@ -1,8 +1,8 @@
 ﻿using HarmonyLib;
-using PulsarModLoader.Utilities;
-using Steamworks;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
+using Logger = PulsarModLoader.Utilities.Logger;
 
 namespace AdvancedVCSettings
 {
@@ -17,22 +17,24 @@ namespace AdvancedVCSettings
                 PLPlayer player = PLServer.Instance.GetPlayerFromPlayerID(inPlayerID);
                 if(player == null)
                 {
-                    Logger.Info("AVC NPSPatch: Player was null");
+                    Logger.Info("AVC NPSPatch: PLPlayer was null");
                     return;
                 }
 
                 PhotonPlayer PPlayer = player.GetPhotonPlayer();
 
-                if (PPlayer != null && Global.SteamPlayerVolumes.Value.ContainsKey(PPlayer.SteamID.m_SteamID))
+                if (PPlayer != null)
                 {
-                    if (Global.PlayerVolumes.ContainsKey(PPlayer))
+                    if(PPlayer.IsLocal)
                     {
-                        Global.PlayerVolumes[PPlayer] = Global.SteamPlayerVolumes.Value[PPlayer.SteamID.m_SteamID];
+                        return;
                     }
-                    else
-                    {
-                        Logger.Info("Couldn't load setting from steam volumes into PlayerVolumes");
-                    }
+
+                    Global.PlayerData.Add(PPlayer, new PlayerVCSettings(player));
+                }
+                else
+                {
+                    Logger.Info("AVC NPSPatch: PPlayer was null");
                 }
             }
         }
@@ -43,27 +45,17 @@ namespace AdvancedVCSettings
         {
             static void Postfix(PLGlobal __instance)
             {
-                List<PhotonPlayer> PlayerList = Global.PlayerVolumes.Keys.ToList();
-                foreach (PhotonPlayer PPlayer in PlayerList)
+                foreach (PhotonPlayer PPlayer in PhotonNetwork.otherPlayers)
                 {
-                    if (PPlayer.SteamID != CSteamID.Nil && Global.SteamPlayerVolumes.Value.ContainsKey(PPlayer.SteamID.m_SteamID))
+                    PLPlayer player = PLServer.GetPlayerForPhotonPlayer(PPlayer);
+                    if (player != null)
                     {
-                        Global.PlayerVolumes[PPlayer] = Global.SteamPlayerVolumes.Value[PPlayer.SteamID.m_SteamID];
+                        Global.PlayerData.Add(PPlayer, new PlayerVCSettings(player));
                     }
-                }
-            }
-        }
-
-        //Adds volume to list when photonVoice is instantiated.
-        [HarmonyPatch(typeof(PLPhotonVoice), "Start")]
-        class PLPVStartPatch
-        {
-            static void Postfix(PLPhotonVoice __instance)
-            {
-                PhotonPlayer PPLayer = __instance.photonView.owner;
-                if (!PPLayer.IsLocal)
-                {
-                    Global.PlayerVolumes.Add(PPLayer, 1f);
+                    else
+                    {
+                        Logger.Info("AVC ENGPatch: PLPlayer was null");
+                    }
                 }
             }
         }
@@ -72,12 +64,21 @@ namespace AdvancedVCSettings
         [HarmonyPatch(typeof(PhotonVoiceSpeaker), "OnAudioFrame")]
         internal class PVSAudioFramePatch
         {
+            static float lastPrioritySpeakerTime = 0f;
+
             static void Prefix(PhotonVoiceSpeaker __instance, ref float[] frame)
             {
                 PhotonPlayer player = __instance.photonView.owner;
-                if (Global.PlayerVolumes.ContainsKey(player))
+                float time = Time.time;
+                if (Global.PlayerData.ContainsKey(player))
                 {
-                    float playerVolume = Global.PlayerVolumes[player];
+                    PlayerVCSettings playerSettings = Global.PlayerData[player];
+                    if (playerSettings.IsPrioritySpeaker)
+                    {
+                        lastPrioritySpeakerTime = time;
+                    }
+                    //Volume multiplier = Custom Player Volume * Multiplier based on priority speaker. (if last PST > .5 seconds ago && player not a priority speaker. true = volume setting, false = 1x)
+                    float playerVolume = playerSettings.PlayerVolume * ((time - lastPrioritySpeakerTime < 0.5f && !playerSettings.IsPrioritySpeaker) ? Global.nonPrioritySpeakerVolume.Value : 1f);
                     for (int i = 0; i < frame.Length; i++)
                     {
                         frame[i] *= playerVolume;
@@ -97,7 +98,7 @@ namespace AdvancedVCSettings
         {
             static void Postfix(PhotonPlayer photonPlayer)
             {
-                Global.PlayerVolumes.Remove(photonPlayer);
+                Global.PlayerData.Remove(photonPlayer);
             }
         }
 
@@ -107,7 +108,7 @@ namespace AdvancedVCSettings
         {
             static void Postfix()
             {
-                Global.PlayerVolumes.Clear();
+                Global.PlayerData.Clear();
             }
         }
 
@@ -124,6 +125,10 @@ namespace AdvancedVCSettings
                     if (CachedIsOn)
                     {
                         PhotonVoiceNetwork.Client.Reconnect();
+                    }
+                    else
+                    {
+                        PhotonVoiceNetwork.Client.Disconnect();
                     }
                 }
             }

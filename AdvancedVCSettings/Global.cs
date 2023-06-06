@@ -1,32 +1,18 @@
 ﻿using PulsarModLoader;
-using System.Collections.Generic;
-using Steamworks;
 using PulsarModLoader.Utilities;
+using System.Collections.Generic;
 
 namespace AdvancedVCSettings
 {
     class Global
     {
         public static SaveValue<float> VCMainVolume = new SaveValue<float>("MainVolume", 1f);
-
-        public static Dictionary<PhotonPlayer, float> PlayerVolumes = new Dictionary<PhotonPlayer, float>();
-
+        public static SaveValue<float> nonPrioritySpeakerVolume = new SaveValue<float>("nonPrioritySpeakerVolume", 0.2f);
         public static SaveValue<Dictionary<ulong, float>> SteamPlayerVolumes = new SaveValue<Dictionary<ulong, float>>("SteamID-PlayerVolume", new Dictionary<ulong, float>());
-        
-        public static bool TrySetPlayerVolume(PhotonPlayer player, float volume)
-        {
-            if (PlayerVolumes.ContainsKey(player))
-            {
-                if (player.SteamID != CSteamID.Nil)
-                {
-                    SteamPlayerVolumes.Value[player.SteamID.m_SteamID] = volume;
-                }
+        public static SaveValue<List<ulong>> MutedSteamPlayers = new SaveValue<List<ulong>>("SteamID-Muted", new List<ulong>());
 
-                PlayerVolumes[player] = volume;
-                return true;
-            }
-            return false;
-        }
+        public static Dictionary<PhotonPlayer, PlayerVCSettings> PlayerData = new Dictionary<PhotonPlayer, PlayerVCSettings>();
+       
         
         public static void SetVCState(bool Connect)
         {

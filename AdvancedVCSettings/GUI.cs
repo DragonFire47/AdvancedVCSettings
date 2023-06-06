@@ -1,5 +1,4 @@
 ﻿using PulsarModLoader.CustomGUI;
-using PulsarModLoader.Utilities;
 using UnityEngine;
 using static UnityEngine.GUILayout;
 
@@ -15,24 +14,49 @@ namespace AdvancedVCSettings
         float MasterVolumeMultiplier = 1f;
         float CachedMasterVolumeMultiplier = 1f;
 
+        float NonPrioritySpeakerVolume = 0.2f;
+        float CachedNonPrioritySpeakerVolume = 0.2f;
+
         float AssignedPlayerVolume = 1f;
         float CachedPlayerVolume = 1f;
+
+        bool PrioritySpeaker = false;
+        bool CachedPrioritySpeaker = false;
+
+        bool Muted = false;
+        bool CachedMuted = false;
+
         PhotonPlayer ManagedPPlayer = null;
-        PLPlayer ManagedPlayer = null;
+        PlayerVCSettings ManagedPlayerData = null;
 
         GUILayoutOption[] NumberLabelSetting = new GUILayoutOption[] { MaxWidth(100f) };
 
         private void LoadPlayerSettings()
         {
-            if (ManagedPPlayer != null && Global.PlayerVolumes.ContainsKey(ManagedPPlayer))
+            if (ManagedPPlayer != null && Global.PlayerData.TryGetValue(ManagedPPlayer, out PlayerVCSettings PVCS))
             {
-                AssignedPlayerVolume = Global.PlayerVolumes[ManagedPPlayer];
+                AssignedPlayerVolume = PVCS.PlayerVolume;
                 CachedPlayerVolume = AssignedPlayerVolume;
+
+                PrioritySpeaker = PVCS.IsPrioritySpeaker;
+                CachedPrioritySpeaker = PrioritySpeaker;
+
+                Muted = PVCS.Muted;
+                CachedMuted = Muted;
             }
         }
 
         public override void OnOpen()
         {
+            MasterVolume = PLXMLOptionsIO.Instance.CurrentOptions.GetFloatValue("VolumeVoice");
+            CachedMasterVolume = MasterVolume;
+
+            MasterVolumeMultiplier = Global.VCMainVolume.Value;
+            CachedMasterVolumeMultiplier = MasterVolumeMultiplier;
+
+            NonPrioritySpeakerVolume = Global.nonPrioritySpeakerVolume.Value;
+            CachedNonPrioritySpeakerVolume = NonPrioritySpeakerVolume;
+
             VCEnabled = Global.GetVCState();
         }
 
@@ -89,6 +113,24 @@ namespace AdvancedVCSettings
             }
 
 
+            //Non-Priority Speaker Volume
+            Label("Non-Priority Speaker Volume");
+
+            BeginHorizontal();
+            {
+                NonPrioritySpeakerVolume = HorizontalSlider(NonPrioritySpeakerVolume, 0f, 1f);
+                Label(NonPrioritySpeakerVolume.ToString("000%"), NumberLabelSetting);
+            }
+            EndHorizontal();
+
+            if (CachedNonPrioritySpeakerVolume != NonPrioritySpeakerVolume)
+            {
+                CachedNonPrioritySpeakerVolume = NonPrioritySpeakerVolume;
+                Global.nonPrioritySpeakerVolume.Value = NonPrioritySpeakerVolume;
+            }
+
+
+
             //Manage selected player settings
             Label("Player Volume");
             BeginHorizontal();
@@ -96,7 +138,7 @@ namespace AdvancedVCSettings
                 if (Button("<"))
                 {
                     PhotonPlayer LastPPlayer = null;
-                    foreach (PhotonPlayer pplayer in Global.PlayerVolumes.Keys)
+                    foreach (PhotonPlayer pplayer in Global.PlayerData.Keys)
                     {
                         if (pplayer.IsLocal) //Ignore Local Player
                         {
@@ -116,7 +158,7 @@ namespace AdvancedVCSettings
                 if (Button(">"))
                 {
                     bool passedCurrentPPLayer = false;
-                    foreach (PhotonPlayer pplayer in Global.PlayerVolumes.Keys)
+                    foreach (PhotonPlayer pplayer in Global.PlayerData.Keys)
                     {
                         if (pplayer.IsLocal) //Ignore Local Player
                         {
@@ -138,34 +180,25 @@ namespace AdvancedVCSettings
             }
             EndHorizontal();
 
-
-            //Find PLPlayer
-            bool foundManagedPPlayer = false;
-            foreach (PhotonPlayer pPlayer in Global.PlayerVolumes.Keys)
-            {
-                if (pPlayer == ManagedPPlayer)
-                {
-                    foundManagedPPlayer = true;
-                    PLPlayer player = PLServer.GetPlayerForPhotonPlayer(pPlayer);
-                    if (player != null)
-                    {
-                        ManagedPlayer = player;
-                    }
-                }
-            }
-            if (!foundManagedPPlayer)
+            //Clear PPLayer if null
+            if (ManagedPPlayer != null && !Global.PlayerData.ContainsKey(ManagedPPlayer))
             {
                 ManagedPPlayer = null;
-                ManagedPlayer = null;
+                ManagedPlayerData = null;
             }
 
+            //Load ManagedPlayerData
+            if (ManagedPPlayer != null)
+            {
+                ManagedPlayerData = Global.PlayerData[ManagedPPlayer];
+            }
 
             //Player settings block.
-            if (ManagedPlayer != null)
+            if (ManagedPPlayer != null)
             {
                 BeginVertical();
                 {
-                    Label("Editing volume of: " + ManagedPlayer.GetPlayerName());
+                    Label("Editing volume of: " + ManagedPlayerData.Player.GetPlayerName());
 
                     BeginHorizontal();
                     {
@@ -178,16 +211,24 @@ namespace AdvancedVCSettings
 
                 if (AssignedPlayerVolume != CachedPlayerVolume)
                 {
-                    if (Global.TrySetPlayerVolume(ManagedPPlayer, AssignedPlayerVolume))
-                    {
-                        CachedPlayerVolume = AssignedPlayerVolume;
-                    }
-                    else
-                    {
-                        Messaging.Notification("Player volume does not exist! This player's volume cannot be modified.");
-                        PulsarModLoader.Utilities.Logger.Info("Player volume does not exist!");
-                        return;
-                    }
+                    CachedPlayerVolume = AssignedPlayerVolume;
+                    ManagedPlayerData.PlayerVolume = AssignedPlayerVolume;
+                }
+
+                PrioritySpeaker = Toggle(PrioritySpeaker, "Priority Speaker");
+
+                if (PrioritySpeaker != CachedPrioritySpeaker)
+                {
+                    CachedPrioritySpeaker = PrioritySpeaker;
+                    ManagedPlayerData.IsPrioritySpeaker = PrioritySpeaker;
+                }
+
+                Muted = Toggle(Muted, "Mute player");
+
+                if (Muted != CachedMuted)
+                {
+                    CachedMuted = Muted;
+                    ManagedPlayerData.Muted = Muted;
                 }
             }
             else
