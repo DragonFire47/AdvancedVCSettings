@@ -64,7 +64,7 @@ namespace AdvancedVCSettings
         {
             BeginHorizontal();
             {
-                if (Button((VCEnabled ? "Enable" : "Disable") + " Voice Chat"))
+                if (Button((VCEnabled ? "Disable" : "Enable") + " Voice Chat"))
                 {
                     VCEnabled = !VCEnabled;
                     Global.SetVCState(VCEnabled);
