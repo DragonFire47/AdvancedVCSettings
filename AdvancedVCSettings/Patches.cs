@@ -1,6 +1,4 @@
 ﻿using HarmonyLib;
-using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using Logger = PulsarModLoader.Utilities.Logger;
 
@@ -12,7 +10,7 @@ namespace AdvancedVCSettings
         [HarmonyPatch(typeof(PLServer), "NotifyPlayerStart")]
         class SteamSettingOthersJoinPatch
         {
-            static void Postfix(PLServer __instance, int inPlayerID)
+            static void Postfix(int inPlayerID)
             {
                 PLPlayer player = PLServer.Instance.GetPlayerFromPlayerID(inPlayerID);
                 if(player == null)
@@ -43,20 +41,9 @@ namespace AdvancedVCSettings
         [HarmonyPatch(typeof(PLGlobal), "EnterNewGame")]
         class SteamSettingOnJoinPatch
         {
-            static void Postfix(PLGlobal __instance)
+            static void Postfix()
             {
-                foreach (PhotonPlayer PPlayer in PhotonNetwork.otherPlayers)
-                {
-                    PLPlayer player = PLServer.GetPlayerForPhotonPlayer(PPlayer);
-                    if (player != null)
-                    {
-                        Global.PlayerData.Add(PPlayer, new PlayerVCSettings(player));
-                    }
-                    else
-                    {
-                        Logger.Info("AVC ENGPatch: PLPlayer was null");
-                    }
-                }
+                Global.LoadAllPlayerDatas();
             }
         }
 

@@ -20,11 +20,13 @@ namespace AdvancedVCSettings
             {
                 PLXMLOptionsIO.Instance.CurrentOptions.SetStringValue("VoiceChatEnabled", "1");
                 PhotonVoiceNetwork.Client.Reconnect();
+                LoadAllPlayerDatas();
             }
             else
             {
                 PLXMLOptionsIO.Instance.CurrentOptions.SetStringValue("VoiceChatEnabled", "0");
                 PhotonVoiceNetwork.Client.Disconnect();
+                PlayerData.Clear();
             }
         }
 
@@ -60,12 +62,29 @@ namespace AdvancedVCSettings
             }
             else if (CanFixVCState())
             {
-                Messaging.Notification("Attempting to fix VC");
                 FixVCState();
+                Messaging.Notification("Attempting to fix VC");
             }
             else
             {
                 Messaging.Notification("No fixes available.");
+            }
+        }
+
+        public static void LoadAllPlayerDatas()
+        {
+            PlayerData.Clear();
+            foreach (PhotonPlayer PPlayer in PhotonNetwork.otherPlayers)
+            {
+                PLPlayer player = PLServer.GetPlayerForPhotonPlayer(PPlayer);
+                if (player != null)
+                {
+                    PlayerData.Add(PPlayer, new PlayerVCSettings(player));
+                }
+                else
+                {
+                    Logger.Info("AVC ENGPatch: PLPlayer was null");
+                }
             }
         }
     }
