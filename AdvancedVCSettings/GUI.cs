@@ -1,4 +1,7 @@
-﻿using PulsarModLoader.CustomGUI;
+﻿using HarmonyLib;
+using PulsarModLoader.CustomGUI;
+using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 using static UnityEngine.GUILayout;
 
@@ -30,6 +33,8 @@ namespace AdvancedVCSettings
         PlayerVCSettings ManagedPlayerData = null;
 
         GUILayoutOption[] NumberLabelSetting = new GUILayoutOption[] { MaxWidth(100f) };
+
+        static FieldInfo VoiceSpeakerFieldInfo = AccessTools.Field(typeof(UnityVoiceFrontend), "voiceSpeakers");
 
         private void LoadPlayerSettings()
         {
@@ -198,7 +203,15 @@ namespace AdvancedVCSettings
             {
                 BeginVertical();
                 {
-                    Label("Editing volume of: " + ManagedPlayerData.Player.GetPlayerName());
+                    bool FoundVoice = false;
+                    foreach(PhotonVoiceSpeaker LinkedSpeaker in ((Dictionary<KeyValuePair<int, byte>, PhotonVoiceSpeaker>)VoiceSpeakerFieldInfo.GetValue(PhotonVoiceNetwork.Client)).Values)
+                    {
+                        if(LinkedSpeaker.photonView.owner == ManagedPPlayer)
+                        {
+                            FoundVoice = true;
+                        }
+                    }
+                    Label("Editing volume of: " + ManagedPlayerData.Player.GetPlayerName() + (ManagedPlayerData.Player.TS_ValidClientID ? " (VC Enabled," : " (VC Disabled,") + (FoundVoice ? " Connected)" : " Not Connected)"));
 
                     BeginHorizontal();
                     {
